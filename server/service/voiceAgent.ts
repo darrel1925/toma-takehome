@@ -3,10 +3,53 @@ import deepgramClient from "../clients/deepgram.js";
 import togetherAIClient from "../clients/togetherai.js";
 import { User } from "../models/user.js";
 import {
-  initialMessageCarInfo,
-  initialMessageIsElectric,
-  initialMessageName,
+  initialMessages,
+  INITIAL_INTENT,
+  OIL_CHANGE_INTENT,
+  SERVICE_OPTIONS_INTENT,
+  RESPONSE_FORMATTING,
+  RECOMMEND_SERVICE_INTENT,
+  UNKNOWN_INTENT,
+  BATTERY_REPLACEMENT_INTENT,
+  TIRE_ROTATION_INTENT,
+  WINDSHIELD_WIPER_REPLACEMENT as WINDSHIELD_WIPER_REPLACEMENT_INTENT,
+  CHARGING_PORT_DIAGNOSIS_INTENT,
 } from "../utils/prompts.js";
+import { json } from "stream/consumers";
+
+enum Intent {
+  INITIAL, // The conversation has just started
+  SERVICE_OPTIONS, // Users is asking what services are available
+  BATTERY_REPLACEMENT, // User is asking about battery replacement
+  CHARGING_PORT_DIAGNOSIS, // User is asking about charging port diagnosis
+  FACTORY_RECOMMENDED_MAINTENANCE, // User is asking about factory recommended maintenance
+  OIL_CHANGE, // User is asking about oil change
+  TIRE_ROTATION, // User is asking about tire rotation
+  WINDSHIELD_WIPER_REPLACEMENT, // User is asking about windshield wiper replacement
+  WINDSHIELD_REPLACEMENT, // User is asking about windshield replacement
+  RECOMMEND_SERVICE, // User is asking for a service recommendation
+  CONFIRM_APPOINTMENT, // User is confirming an appointment
+  SUGGEST_AVAILABILITY, // User is asking for availability
+  UNKNOWN, // It is unclear what the user is asking
+}
+
+interface UserContext {
+  firstName: string;
+  lastName: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: string;
+  desiredService: string;
+  appointmentTime: string;
+  appointmentDayOfWeek: string;
+}
+
+type Role = "user" | "assistant" | "system";
+
+export interface Message {
+  role: Role;
+  content: string;
+}
 
 const stellantis = [
   "Abarth",
@@ -30,6 +73,24 @@ const stellantis = [
  * This class uses Deepgram for speech-to-text and text-to-speech, and an LLM for processing responses.
  */
 class VoiceAgentService {
+  private userContext: UserContext;
+  private messages: Message[];
+  private intent: Intent = Intent.INITIAL;
+
+  constructor() {
+    this.userContext = {
+      firstName: "",
+      lastName: "",
+      vehicleMake: "",
+      vehicleModel: "",
+      vehicleYear: "",
+      desiredService: "",
+      appointmentTime: "",
+      appointmentDayOfWeek: "",
+    };
+    this.messages = initialMessages;
+  }
+
   /**
    * Speaks the given question to the user.
    * @param question - The question to speak to the user.
@@ -55,129 +116,122 @@ class VoiceAgentService {
    * @param messages - The conversation context.
    * @returns The updated conversation context including the LLM's response.
    */
-  async getLLMResp(userResp: string, messages: any[]): Promise<any[]> {
-    const updatedMessages = await togetherAIClient.getResponse(userResp, messages);
+  async getLLMResp(userResp: string): Promise<any[]> {
+    this.messages.push({ role: "user", content: userResp });
+    const updatedMessages = await togetherAIClient.getResponse(this.messages);
+    this.messages = updatedMessages;
     return updatedMessages;
   }
 
-  /**
-   * Initiates a conversation to collect the user's full name.
-   * @returns A User object containing the user's first and last name.
-   */
-  async startNameConversation(): Promise<User> {
-    const initialConversation = initialMessageName;
-    const startingQuestion = initialMessageName[1].content;
-    await this.speak(startingQuestion);
-    let user = new User();
+  updateUserContext(json: UserContext) {
+    this.userContext = {
+      ...this.userContext,
+      ...json,
+    };
+  }
 
-    while (!user.first_name || !user.last_name) {
-      // Wait for the user to respond
+  /**
+   * Identifies the intent from the user's response.
+   * @param userResp - The user's response.
+   * @returns The identified intent.
+   */
+  identifyIntent(): { intent: Intent; resp: string } {
+    const recentMessage = this.messages[this.messages.length - 1].content;
+    const [intent, jsonStr, llmResp] = recentMessage.split("::");
+
+    console.log("Intent:", intent);
+    console.log("JSON:", jsonStr);
+
+    let json: UserContext = JSON.parse(jsonStr);
+    this.updateUserContext(json);
+
+    // Get first word from the LLM response
+    if (intent === "SERVICE_OPTIONS") {
+      return { intent: Intent.SERVICE_OPTIONS, resp: llmResp };
+    } else if (intent === "BATTERY_REPLACEMENT") {
+      return { intent: Intent.BATTERY_REPLACEMENT, resp: llmResp };
+    } else if (intent === "CHARGING_PORT_DIAGNOSIS") {
+      return { intent: Intent.CHARGING_PORT_DIAGNOSIS, resp: llmResp };
+    } else if (intent === "FACTORY_RECOMMENDED_MAINTENANCE") {
+      return { intent: Intent.FACTORY_RECOMMENDED_MAINTENANCE, resp: llmResp };
+    } else if (intent === "OIL_CHANGE") {
+      return { intent: Intent.OIL_CHANGE, resp: llmResp };
+    } else if (intent === "TIRE_ROTATION") {
+      return { intent: Intent.TIRE_ROTATION, resp: llmResp };
+    } else if (intent === "WINDSHIELD_WIPER_REPLACEMENT") {
+      return { intent: Intent.WINDSHIELD_WIPER_REPLACEMENT, resp: llmResp };
+    } else if (intent === "WINDSHIELD_REPLACEMENT") {
+      return { intent: Intent.WINDSHIELD_REPLACEMENT, resp: llmResp };
+    } else if (intent === "RECOMMEND_SERVICE") {
+      return { intent: Intent.RECOMMEND_SERVICE, resp: llmResp };
+    } else if (intent === "CONFIRM_APPOINTMENT") {
+      return { intent: Intent.CONFIRM_APPOINTMENT, resp: llmResp };
+    } else if (intent === "SUGGEST_AVAILABILITY") {
+      return { intent: Intent.SUGGEST_AVAILABILITY, resp: llmResp };
+    }
+
+    return { intent: Intent.UNKNOWN, resp: llmResp };
+  }
+
+  async handleConversation(): Promise<void> {
+    let question = "";
+    // deepgramClient.initMicrophone();
+    await this.speak("Welcome to our service center. How can I help you today?");
+    let userResp = await this.listenToUser();
+
+    // json to string
+    await this.getLLMResp(
+      RESPONSE_FORMATTING +
+        INITIAL_INTENT.replace("{user_info}", JSON.stringify(this.userContext)).replace(
+          "{user_response}",
+          userResp
+        )
+    );
+
+    let response = this.identifyIntent();
+    this.intent = response.intent;
+    await this.speak(response.resp);
+
+    while (true) {
       const userResp = await this.listenToUser();
-      // Get the response from the LLM model
-      const updatedMessages = await this.getLLMResp(userResp, initialConversation);
 
-      // Get the response and JSON from the LLM model
-      const llmResponse = updatedMessages[updatedMessages.length - 1].content;
-      const [jsonStr, llmResp] = llmResponse.split("::");
-      const llmJSON = JSON.parse(jsonStr);
-
-      // Update the user's first and last name
-      user.first_name = llmJSON.first_name;
-      user.last_name = llmJSON.last_name;
-
-      console.log("Response from LLM:", llmJSON);
-
-      if (user.first_name != "" && user.last_name != "") {
-        break;
-      }
-      // Speak the response
-      await this.speak(llmResp);
-    }
-
-    console.log("User's first name:", user.first_name);
-    console.log("User's last name:", user.last_name);
-    console.log("Name conversation ended.");
-
-    return user;
-  }
-
-  /**
-   * Initiates a conversation to collect the user's vehicle information.
-   * @param user - A User object containing the user's name.
-   * @returns A User object containing the user's name and vehicle information.
-   */
-  async getCarInformation(user: User): Promise<User> {
-    const initialConversation = initialMessageCarInfo;
-    const startingQuestion = initialMessageCarInfo[1].content;
-    await this.speak(startingQuestion);
-
-    while (!user.make || !user.model || !user.year) {
-      // Wait for the user to respond
-      const userResp = await this.listenToUser();
-      // Get the response from the LLM model
-      const updatedMessages = await this.getLLMResp(userResp, initialConversation);
-
-      // Get the response and JSON from the LLM model
-      const llmResponse = updatedMessages[updatedMessages.length - 1].content;
-      const [jsonStr, llmResp] = llmResponse.split("::");
-      const llmJSON = JSON.parse(jsonStr);
-
-      // Update the user's vehicle information
-      user.make = llmJSON.make;
-      user.model = llmJSON.model;
-      user.year = parseInt(llmJSON.year, 10);
-
-      console.log("Response from LLM:", llmJSON);
-
-      if (user.make != "" && user.model != "" && user.year != 0) {
-        break;
+      switch (this.intent) {
+        case Intent.OIL_CHANGE:
+          question = OIL_CHANGE_INTENT;
+          break;
+        case Intent.SERVICE_OPTIONS:
+          question = SERVICE_OPTIONS_INTENT;
+          break;
+        case Intent.RECOMMEND_SERVICE:
+          question = RECOMMEND_SERVICE_INTENT;
+          break;
+        case Intent.BATTERY_REPLACEMENT:
+          question = BATTERY_REPLACEMENT_INTENT;
+          break;
+        case Intent.TIRE_ROTATION:
+          question = TIRE_ROTATION_INTENT;
+          break;
+        case Intent.WINDSHIELD_WIPER_REPLACEMENT:
+          question = WINDSHIELD_WIPER_REPLACEMENT_INTENT;
+          break;
+        case Intent.CHARGING_PORT_DIAGNOSIS:
+          question = CHARGING_PORT_DIAGNOSIS_INTENT;
+          break;
+        case Intent.UNKNOWN:
+          question = UNKNOWN_INTENT;
+          break;
       }
 
-      // Speak the response
-      await this.speak(llmResp);
+      await this.getLLMResp(
+        RESPONSE_FORMATTING +
+          question
+            .replace("{user_info}", JSON.stringify(this.userContext))
+            .replace("{user_response}", userResp)
+      );
+      let response = this.identifyIntent();
+      this.intent = response.intent;
+      await this.speak(response.resp);
     }
-
-    console.log("User's vehicle make:", user.make);
-    console.log("User's vehicle model:", user.model);
-    console.log("User's vehicle year:", user.year);
-    console.log("Car information conversation ended.");
-
-    return user;
-  }
-
-  async recommendService(user: User): Promise<string> {
-    if (stellantis.includes(user.make)) {
-      return "Factory-recommended maintenance if your vehicle hit 50k miles.";
-    }
-
-    const carMakeModel = `${user.year} ${user.make} ${user.model}`;
-
-    const updatedMessages = await this.getLLMResp(carMakeModel, initialMessageIsElectric);
-    // parse string to JSON
-    const llmResponse = updatedMessages[updatedMessages.length - 1].content;
-    const isElectric = JSON.parse(llmResponse);
-    console.log("Is electric:", isElectric);
-    console.log("Response from LLM:", llmResponse);
-
-    if (isElectric.isElectric) {
-      return "Battery replacement, charging port diagnosis.";
-    }
-
-    return "Oil change, tire rotation, brake inspection.";
-  }
-
-  /**
-   * Starts the complete conversation to collect both the user's name and vehicle information.
-   * @returns A User object containing the user's name and vehicle information.
-   */
-  async startConversation(): Promise<User> {
-    let user = await this.startNameConversation();
-    user = await this.getCarInformation(user);
-    const serviceRecommendation = await this.recommendService(user);
-    this.speak(serviceRecommendation);
-    console.log("Service recommendation:", serviceRecommendation);
-
-    return user;
   }
 }
 

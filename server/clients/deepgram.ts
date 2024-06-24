@@ -7,6 +7,9 @@ import https from "https";
 import fs from "fs";
 import { IncomingMessage } from "http";
 import player from "play-sound";
+import Microphone from "node-microphone";
+import MicrophoneStream from "microphone-stream";
+import { channel } from "diagnostics_channel";
 
 const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en";
 const SILENCE_TIMEOUT = 2000; // 3 seconds of silence to determine end of speech
@@ -14,6 +17,8 @@ const SILENCE_TIMEOUT = 2000; // 3 seconds of silence to determine end of speech
 export class DeepgramInternal {
   private deepgram: DeepgramClient;
   private apiKey: string;
+  private audioPlayer: any;
+  private micStream: Writable;
 
   constructor() {
     const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
@@ -22,6 +27,12 @@ export class DeepgramInternal {
     }
     this.apiKey = deepgramApiKey;
     this.deepgram = createClient(deepgramApiKey);
+    this.audioPlayer = player();
+    this.micStream = new Writable();
+  }
+
+  openNewMicStream() {
+    this.micStream = getMicrophoneStream();
   }
 
   /**
@@ -34,51 +45,51 @@ export class DeepgramInternal {
    */
   async microphoneToText(): Promise<string> {
     // STEP 1: Get the microphone stream to capture audio input
-    const micStream = await getMicrophoneStream();
+    this.openNewMicStream();
+    let silenceTimer: NodeJS.Timeout;
 
     return new Promise((resolve, reject) => {
       // STEP 2: Create a live transcription connection with Deepgram
       const connection = this.deepgram.listen.live({
-        model: "nova-2", // Use the 'nova-2' model for transcription
-        language: "en-US", // Set the language to English
+        model: "nova-2", // Use the 'nova-2' model for transcription optimized for phone calls
+        language: "en", // Set the language to English
+        // vad_events: true, // Enable voice activity detection events
+        // punctuate: true, // Enable punctuation for better readability
         smart_format: true, // Enable smart formatting for better readability
-        // sample_rate: 8000, // Set the sample rate to 8kHz
-        // encoding: "mulaw", // Set the encoding to mu-law
+        filler_words: true, // Enable filler words so we don't misinterpret them as silence
       });
 
       // Initialize variables for managing the transcript and silence detection
       let transcript = "";
-      let silenceTimer: NodeJS.Timeout;
-      let silenceDetected = false;
 
       /**
        * Resets the silence detection timer.
        * If no audio is received for the duration of SILENCE_TIMEOUT, the transcription is stopped.
        */
       function resetSilenceTimer() {
-        if (silenceDetected) {
-          return;
-        }
-
         if (silenceTimer) {
           console.log("Resetting silence timer.");
           clearTimeout(silenceTimer);
         }
 
         silenceTimer = setTimeout(() => {
+          if (transcript.trim().length === 0) {
+            console.log("No speech detected. Still listening...");
+            return;
+          }
+
           console.log("Silence detected. Closing connection.");
           resolve(transcript);
-          silenceDetected = true;
-          micStream.destroy(); // Close the microphone stream
+          deepgramClient.micStream.destroy(); // Close the microphone stream
         }, SILENCE_TIMEOUT);
       }
 
       // STEP 3: Listen for events from the live transcription connection
       connection.on(LiveTranscriptionEvents.Open, () => {
-        console.log("Connection opened.");
+        console.log("Listening for user response...");
 
         // STEP 4: Send the microphone audio stream to the live transcription connection
-        micStream.on("data", (chunk: Buffer) => {
+        this.micStream.on("data", (chunk: Buffer) => {
           try {
             connection.send(chunk); // Send the optimized audio chunk to Deepgram
           } catch (error) {
@@ -86,17 +97,17 @@ export class DeepgramInternal {
           }
         });
 
-        micStream.on("end", () => {
+        this.micStream.on("end", () => {
           console.log("Microphone stream ended.");
           connection.finish(); // Close the connection when the microphone stream ends
         });
 
-        micStream.on("destroy", () => {
-          console.log("Microphone stream destroyç.");
+        this.micStream.on("destroy", () => {
+          console.log("Microphone stream destroy.");
           connection.finish(); // Close the connection when the microphone stream ends
         });
 
-        micStream.on("close", () => {
+        this.micStream.on("close", () => {
           console.log("Microphone stream close.");
           connection.finish(); // Close the connection when the microphone stream ends
         });
@@ -108,9 +119,9 @@ export class DeepgramInternal {
 
         // Fires when a new transcript is received from Deepgram
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+          console.log("Transcript:", transcript);
           if (data.channel.alternatives[0].transcript) {
             transcript += ` ${data.channel.alternatives[0].transcript}`;
-            console.log("Transcript:", transcript);
           }
           // Reset the silence timer to continue receiving a new text
           resetSilenceTimer();
@@ -170,7 +181,6 @@ export class DeepgramInternal {
 
   // Helper function to play audio from a stream
   playAudioFromStream(stream: IncomingMessage, callback: () => void) {
-    const audioPlayer = player();
     const tempFilePath = "temp.mp3";
 
     // Save the stream to a temporary file and play it
@@ -179,7 +189,7 @@ export class DeepgramInternal {
 
     // Once the file has been fully written, play the audio
     tempFile.on("finish", () => {
-      audioPlayer.play(tempFilePath, (err: Error) => {
+      this.audioPlayer.play(tempFilePath, (err: Error) => {
         if (err) {
           console.error("Error playing audio:", err);
         }
@@ -204,7 +214,7 @@ export class DeepgramInternal {
  * @returns {Promise<Writable>} - The Writable stream from the microphone.
  * @throws {Error} - If there is an issue with starting the microphone recording.
  */
-async function getMicrophoneStream(): Promise<Writable> {
+function getMicrophoneStream(): Writable {
   // brew install sox
   const microphone = new Mic(); // Create a new instance of the node-microphone
   return microphone.startRecording(); // Start recording and return the Writable stream
@@ -212,68 +222,3 @@ async function getMicrophoneStream(): Promise<Writable> {
 
 const deepgramClient = new DeepgramInternal();
 export default deepgramClient;
-
-// processAudioChunk(chunk: Buffer): Buffer {
-//   // Convert the microphone chunk to 8kHz mu-law audio buffer
-//   const wav = new WaveFile();
-//   wav.fromScratch(1, 44100, "16", chunk); // Assume the input chunk is 44.1kHz, 16-bit PCM
-
-//   // Resample to 8kHz
-//   wav.toSampleRate(8000);
-
-//   // Convert to mu-law
-//   wav.toMuLaw();
-//   const pcmBuffer = Buffer.from(wav.getSamples(true));
-//   return pcmBuffer;
-// }
-
-// processAudioChunk(chunk: Buffer): Buffer {
-//   try {
-//     const wav = new WaveFile();
-
-//     // Check if the chunk is a valid WAV file
-//     if (!this.isValidWav(chunk)) {
-//       console.log("Chunk is not a valid WAV file. Adding WAV header.");
-//       chunk = this.addWavHeader(chunk);
-//     }
-
-//     wav.fromBuffer(chunk);
-//     wav.toSampleRate(8000);
-//     wav.toBitDepth("16");
-//     const pcmBuffer = Buffer.from(wav.getSamples(true));
-
-//     return pcmBuffer;
-//   } catch (error) {
-//     console.error("Failed to process audio chunk:", error);
-//     console.log("Chunk:", chunk);
-//     throw error;
-//   }
-// }
-
-// isValidWav(chunk: Buffer): boolean {
-//   const riffHeader = chunk.slice(0, 4).toString("ascii");
-//   return riffHeader === "RIFF";
-// }
-
-// addWavHeader(chunk: Buffer): Buffer {
-//   const sampleRate = 44100; // Assume original sample rate is 44100Hz
-//   const numChannels = 1; // Mono
-//   const bitDepth = 16; // 16-bit
-
-//   const header = Buffer.alloc(44);
-//   header.write("RIFF", 0, 4, "ascii");
-//   header.writeUInt32LE(36 + chunk.length, 4);
-//   header.write("WAVE", 8, 4, "ascii");
-//   header.write("fmt ", 12, 4, "ascii");
-//   header.writeUInt32LE(16, 16); // Subchunk1Size (16 for PCM)
-//   header.writeUInt16LE(1, 20); // AudioFormat (1 for PCM)
-//   header.writeUInt16LE(numChannels, 22);
-//   header.writeUInt32LE(sampleRate, 24);
-//   header.writeUInt32LE((sampleRate * numChannels * bitDepth) / 8, 28); // ByteRate
-//   header.writeUInt16LE((numChannels * bitDepth) / 8, 32); // BlockAlign
-//   header.writeUInt16LE(bitDepth, 34);
-//   header.write("data", 36, 4, "ascii");
-//   header.writeUInt32LE(chunk.length, 40);
-
-//   return Buffer.concat([header, chunk]);
-// }
