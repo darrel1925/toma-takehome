@@ -36,7 +36,7 @@ Other considerations
 3. Convert audio to 8kHz mulaw: [link](https://github.com/darrel1925/toma-takehome/blob/main/service/waveFileService.ts#L5-L32)
 
 ### Notes
-• I did not use together AI's LLM's API. I used OpenAI's because GPT-4o was easier to use.
+• I did not use together AI's LLM's API. I used OpenAI's because GPT-4o was easier to work with.
 
 
 :)
