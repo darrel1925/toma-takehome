@@ -6,10 +6,11 @@
     "@types/bun": "latest",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.15.7",
     "typescript": "^5.5.2"
   },
   "scripts": {
-    "start": "nodemon",
+    "start": "bun tsx app.ts",
     "dev": "nodemon --exec ts-node app.ts",
     "dev2": "ts-node --esm app.ts"
   },
