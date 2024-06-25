@@ -60,6 +60,7 @@ export class DeepgramInternal {
           clearTimeout(silenceTimer);
         }
 
+        // @ts-ignore
         silenceTimer = setTimeout(() => {
           // If no speech is detected, continue listening
           if (transcript.trim().length === 0) {
@@ -80,7 +81,7 @@ export class DeepgramInternal {
         // STEP 4: Send the microphone audio stream to the live transcription connection
         micStream.on("data", (chunk: Buffer) => {
           const optimizedChunk = waveFileService.bufferTo8kHzMulaw(chunk);
-          connection.send(optimizedChunk);
+          connection.send(optimizedChunk); 
         });
 
         // Close the connection when the microphone stream ends

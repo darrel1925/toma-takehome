@@ -2,9 +2,9 @@ import pkg from "wavefile";
 const { WaveFile } = pkg;
 
 class WaveFileService {
-  bufferTo8kHzMulaw(chunk: Buffer) {
+  bufferTo8kHzMulaw(chunk: Buffer): any  {
     if (!this.hasWavHeader(chunk)) {
-      return chunk;
+      return chunk ;
     }
 
     // Extract the WAV header and audio
