@@ -1,7 +1,5 @@
-import { isPrimitive } from "util";
 import deepgramClient from "../clients/deepgram.js";
 import togetherAIClient from "../clients/togetherai.js";
-import { User } from "../models/user.js";
 import {
   initialMessages,
   INITIAL_INTENT,
@@ -15,7 +13,6 @@ import {
   WINDSHIELD_WIPER_REPLACEMENT as WINDSHIELD_WIPER_REPLACEMENT_INTENT,
   CHARGING_PORT_DIAGNOSIS_INTENT,
 } from "../utils/prompts.js";
-import { json } from "stream/consumers";
 
 enum Intent {
   INITIAL, // The conversation has just started
@@ -50,23 +47,6 @@ export interface Message {
   role: Role;
   content: string;
 }
-
-const stellantis = [
-  "Abarth",
-  "Alfa Romeo",
-  "Chrysler",
-  "Citroën",
-  "Dodge",
-  "DS",
-  "Fiat",
-  "Jeep",
-  "Lancia",
-  "Maserati",
-  "Opel",
-  "Peugeot",
-  "Ram",
-  "Vauxhall",
-];
 
 /**
  * VoiceAgentService class to handle interactions with the user via voice.
@@ -139,9 +119,6 @@ class VoiceAgentService {
     const recentMessage = this.messages[this.messages.length - 1].content;
     const [intent, jsonStr, llmResp] = recentMessage.split("::");
 
-    console.log("Intent:", intent);
-    console.log("JSON:", jsonStr);
-
     let json: UserContext = JSON.parse(jsonStr);
     this.updateUserContext(json);
 
@@ -176,7 +153,7 @@ class VoiceAgentService {
   async handleConversation(): Promise<void> {
     let question = "";
     // deepgramClient.initMicrophone();
-    await this.speak("Welcome to our service center. How can I help you today?");
+    // await this.speak("Welcome to our service center. How can I help you today?");
     let userResp = await this.listenToUser();
 
     // json to string

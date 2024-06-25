@@ -7,18 +7,15 @@ import https from "https";
 import fs from "fs";
 import { IncomingMessage } from "http";
 import player from "play-sound";
-import Microphone from "node-microphone";
-import MicrophoneStream from "microphone-stream";
-import { channel } from "diagnostics_channel";
+import waveFileService from "../service/waveFileService.ts";
 
 const url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en";
-const SILENCE_TIMEOUT = 2000; // 3 seconds of silence to determine end of speech
+const SILENCE_TIMEOUT = 2000; // 2 seconds of silence to determine end of speech
 
 export class DeepgramInternal {
   private deepgram: DeepgramClient;
   private apiKey: string;
   private audioPlayer: any;
-  private micStream: Writable;
 
   constructor() {
     const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
@@ -28,11 +25,6 @@ export class DeepgramInternal {
     this.apiKey = deepgramApiKey;
     this.deepgram = createClient(deepgramApiKey);
     this.audioPlayer = player();
-    this.micStream = new Writable();
-  }
-
-  openNewMicStream() {
-    this.micStream = getMicrophoneStream();
   }
 
   /**
@@ -45,42 +37,39 @@ export class DeepgramInternal {
    */
   async microphoneToText(): Promise<string> {
     // STEP 1: Get the microphone stream to capture audio input
-    this.openNewMicStream();
-    let silenceTimer: NodeJS.Timeout;
+    const micStream = this.getMicrophoneStream();
+    let silenceTimer: NodeJS.Timeout; // Timer to detect silence
+    let transcript = ""; // Track words spoken by the user
 
     return new Promise((resolve, reject) => {
-      // STEP 2: Create a live transcription connection with Deepgram
       const connection = this.deepgram.listen.live({
         model: "nova-2", // Use the 'nova-2' model for transcription optimized for phone calls
         language: "en", // Set the language to English
-        // vad_events: true, // Enable voice activity detection events
-        // punctuate: true, // Enable punctuation for better readability
         smart_format: true, // Enable smart formatting for better readability
         filler_words: true, // Enable filler words so we don't misinterpret them as silence
       });
-
-      // Initialize variables for managing the transcript and silence detection
-      let transcript = "";
 
       /**
        * Resets the silence detection timer.
        * If no audio is received for the duration of SILENCE_TIMEOUT, the transcription is stopped.
        */
       function resetSilenceTimer() {
+        // If there is an existing silence timer, clear it
         if (silenceTimer) {
           console.log("Resetting silence timer.");
           clearTimeout(silenceTimer);
         }
 
         silenceTimer = setTimeout(() => {
+          // If no speech is detected, continue listening
           if (transcript.trim().length === 0) {
-            console.log("No speech detected. Still listening...");
             return;
           }
 
-          console.log("Silence detected. Closing connection.");
+          // console.log("Silence detected. Closing connection.");
+          // Close stream and send back the transcript
           resolve(transcript);
-          deepgramClient.micStream.destroy(); // Close the microphone stream
+          micStream.destroy();
         }, SILENCE_TIMEOUT);
       }
 
@@ -89,27 +78,15 @@ export class DeepgramInternal {
         console.log("Listening for user response...");
 
         // STEP 4: Send the microphone audio stream to the live transcription connection
-        this.micStream.on("data", (chunk: Buffer) => {
-          try {
-            connection.send(chunk); // Send the optimized audio chunk to Deepgram
-          } catch (error) {
-            console.log("Chunk not sent.");
-          }
+        micStream.on("data", (chunk: Buffer) => {
+          const optimizedChunk = waveFileService.bufferTo8kHzMulaw(chunk);
+          connection.send(optimizedChunk);
         });
 
-        this.micStream.on("end", () => {
-          console.log("Microphone stream ended.");
-          connection.finish(); // Close the connection when the microphone stream ends
-        });
-
-        this.micStream.on("destroy", () => {
-          console.log("Microphone stream destroy.");
-          connection.finish(); // Close the connection when the microphone stream ends
-        });
-
-        this.micStream.on("close", () => {
+        // Close the connection when the microphone stream ends
+        micStream.on("close", () => {
           console.log("Microphone stream close.");
-          connection.finish(); // Close the connection when the microphone stream ends
+          connection.finish();
         });
 
         // Event fired when the connection to Deepgram is closed
@@ -127,12 +104,7 @@ export class DeepgramInternal {
           resetSilenceTimer();
         });
 
-        connection.on(LiveTranscriptionEvents.Metadata, (data) => {
-          // console.log("Metadata:", data);
-        });
-
         connection.on(LiveTranscriptionEvents.Error, (err) => {
-          console.error("Error:", err);
           reject(err);
         });
       });
@@ -159,7 +131,6 @@ export class DeepgramInternal {
         if (res.statusCode !== 200) {
           console.error(`HTTP error! Status: ${res.statusCode}`);
           reject(new Error(`HTTP error! Status: ${res.statusCode}`));
-
           return;
         }
 
@@ -180,7 +151,7 @@ export class DeepgramInternal {
   }
 
   // Helper function to play audio from a stream
-  playAudioFromStream(stream: IncomingMessage, callback: () => void) {
+  private playAudioFromStream(stream: IncomingMessage, callback: () => void) {
     const tempFilePath = "temp.mp3";
 
     // Save the stream to a temporary file and play it
@@ -203,21 +174,21 @@ export class DeepgramInternal {
       });
     });
   }
-}
 
-/**
- * Helper function to get microphone stream.
- *
- * This function initializes the microphone on user's device and starts recording.
- * It returns a Writable stream which can be used to read audio data from the microphone.
- *
- * @returns {Promise<Writable>} - The Writable stream from the microphone.
- * @throws {Error} - If there is an issue with starting the microphone recording.
- */
-function getMicrophoneStream(): Writable {
-  // brew install sox
-  const microphone = new Mic(); // Create a new instance of the node-microphone
-  return microphone.startRecording(); // Start recording and return the Writable stream
+  /**
+   * Helper function to get microphone stream.
+   *
+   * This function initializes the microphone on user's device and starts recording.
+   * It returns a Writable stream which can be used to read audio data from the microphone.
+   *
+   * @returns {Promise<Writable>} - The Writable stream from the microphone.
+   * @throws {Error} - If there is an issue with starting the microphone recording.
+   */
+  private getMicrophoneStream(): Writable {
+    // brew install sox
+    const microphone = new Mic(); // Create a new instance of the node-microphone
+    return microphone.startRecording(); // Start recording and return the Writable stream
+  }
 }
 
 const deepgramClient = new DeepgramInternal();
