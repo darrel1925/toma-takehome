@@ -31,9 +31,9 @@ Other considerations
 
 
 ### Code references
-• Text-to-speech API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L93-L130)
-• Speech-to-text API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L28-L91)
-• Convert audio to 8kHz mulaw: [link](https://github.com/darrel1925/toma-takehome/blob/main/service/waveFileService.ts#L5-L32)
+1. Text-to-speech API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L93-L130)
+2. Speech-to-text API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L28-L91)
+3. Convert audio to 8kHz mulaw: [link](https://github.com/darrel1925/toma-takehome/blob/main/service/waveFileService.ts#L5-L32)
 
 ### Notes
 • I did not use together AI's LLM's API. I used OpenAI's because GPT-4o was easier to use.
