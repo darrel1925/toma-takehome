@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "module": "index.ts",
+  "module": "app.ts",
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
@@ -10,8 +10,8 @@
   },
   "scripts": {
     "start": "nodemon",
-    "dev": "nodemon --exec ts-node index.ts",
-    "dev2": "ts-node --esm index.ts"
+    "dev": "nodemon --exec ts-node app.ts",
+    "dev2": "ts-node --esm app.ts"
   },
   "peerDependencies": {
     "typescript": "^5.5.2"

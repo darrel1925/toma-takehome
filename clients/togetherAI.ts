@@ -17,6 +17,7 @@ class TogetherAI {
     });
   }
 
+  // Get LLM response from OpenAI
   public async getResponse(messages: Message[]): Promise<Message[]> {
     const resp = await this.openai.chat.completions.create({
       messages: messages,
@@ -31,6 +32,7 @@ class TogetherAI {
     return messages;
   }
 
+  // Unused together.ai implementation
   // public async getResponse(messages: Message[]): Promise<Message[]> {
   //   const resp = await this.together.chat.completions.create({
   //     messages: messages,

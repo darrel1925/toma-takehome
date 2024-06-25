@@ -2,13 +2,13 @@ import pkg from "wavefile";
 const { WaveFile } = pkg;
 
 class WaveFileService {
-  bufferTo8kHzMulaw(chunk: Buffer): any  {
+  bufferTo8kHzMulaw(chunk: Buffer): any {
     if (!this.hasWavHeader(chunk)) {
-      return chunk ;
+      return chunk;
     }
 
-    // Extract the WAV header and audio
-    const { header, audioData } = this.extractAndRemoveWavHeader(chunk);
+    // Extract the WAV header
+    const { header } = this.extractAndRemoveWavHeader(chunk);
 
     // Extract details from the header
     const { numChannels, sampleRate, bitDepth, samples } = this.extractWavDetails(chunk);
@@ -48,8 +48,6 @@ class WaveFileService {
     const sampleRate = wav.fmt.sampleRate;
     // @ts-ignore
     const samples = wav.data.samples; // Default is de-interleaved
-    // @ts-ignore
-    const chunkSize = wav.data.chunkSize;
     const bitDepth = wav.bitDepth;
 
     return { numChannels, sampleRate, bitDepth, samples };
@@ -58,18 +56,16 @@ class WaveFileService {
   // Extract and remove the WAV header
   extractAndRemoveWavHeader(buffer: Buffer): {
     header: Buffer;
-    audioData: Buffer;
   } {
     const headerSize = 44;
     if (buffer.length > headerSize) {
       const header = buffer.subarray(0, headerSize); // Extract the header
-      const audioData = Buffer.from(buffer.subarray(headerSize)); // Extract the audio data
-      return { header: Buffer.from(header), audioData: audioData };
+      return { header: Buffer.from(header) };
     }
-    return { header: Buffer.alloc(0), audioData: buffer }; // Return an empty buffer for header if too short
+    return { header: Buffer.alloc(0) }; // Return an empty buffer for header if too short
   }
 
-  // Function to create a WAV file from scratch
+  // Create a WAV file from scratch
   createWavFile(
     numChannels: number,
     sampleRate: number,
@@ -87,7 +83,6 @@ class WaveFileService {
     return wav;
   }
 }
-
 
 const waveFileService = new WaveFileService();
 export default waveFileService;

@@ -2,6 +2,6 @@
     "watch": ["*"],
     "ext": "ts,json",
     "ignore": ["node_modules"],
-    "exec": "ts-node --esm index.ts"
+    "exec": "ts-node --esm app.ts"
   }
   

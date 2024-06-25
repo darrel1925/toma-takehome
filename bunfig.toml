@@ -1,5 +1,0 @@
-[bun]
-jsx = "react"
-
-[install]
-extensions = [".ts", ".tsx", ".js", ".jsx"]
