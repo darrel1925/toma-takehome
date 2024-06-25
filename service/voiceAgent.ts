@@ -2,16 +2,19 @@ import deepgramClient from "../clients/deepgram.js";
 import togetherAIClient from "../clients/togetherai.js";
 import {
   initialMessages,
-  INITIAL_INTENT,
-  OIL_CHANGE_INTENT as OIL_CHANGE_CTX,
-  SERVICE_OPTIONS_INTENT as SERVICE_CTX,
+  INITIAL_INTENT_CTX,
+  OIL_CHANGE_CTX,
+  SERVICE_OPTIONS_CTX,
   RESPONSE_FORMATTING,
-  RECOMMEND_SERVICE_INTENT as RECOMMEND_SERVICE_CTX,
-  UNKNOWN_INTENT as UNKNOWN_CTX,
-  BATTERY_REPLACEMENT_INTENT as BATTERY_REPLACEMENT_CTX,
-  TIRE_ROTATION_INTENT as TIRE_ROTATION_CTX,
-  WINDSHIELD_WIPER_REPLACEMENT as WINDSHIELD_WIPER_CTX,
-  CHARGING_PORT_DIAGNOSIS_INTENT as CHARGING_PORT_DIAGNOSIS_CTX,
+  RECOMMEND_SERVICE_CTX,
+  UNKNOWN_INTENT_CTX,
+  BATTERY_REPLACEMENT_CTX,
+  TIRE_ROTATION_CTX,
+  WINDSHIELD_WIPER_CTX,
+  CHARGING_PORT_DIAGNOSIS_CTX,
+  FACTORY_MAINTENANCE_CTX,
+  SUGGEST_AVAILABILITY_CTX,
+  CONFIRM_APPOINTMENT_CTX,
 } from "../utils/prompts.js";
 
 interface UserContext {
@@ -63,7 +66,7 @@ class VoiceAgentService {
     let userResp = await this.listenToUser();
 
     // Get response from LLM
-    await this.getLLMResp(userResp, INITIAL_INTENT);
+    await this.getLLMResp(userResp, INITIAL_INTENT_CTX);
     let { resp: initialResp, context: initialContext } = this.identifyIntent();
 
     // Speak
@@ -157,17 +160,28 @@ class VoiceAgentService {
 
     // Get the context needed for the next conversation based on the intent
     const intentMapping: Record<string, string> = {
-      SERVICE_OPTIONS: SERVICE_CTX, // User is asking what services are available
-      BATTERY_REPLACEMENT: BATTERY_REPLACEMENT_CTX, // User is asking about battery replacement
-      CHARGING_PORT_DIAGNOSIS: CHARGING_PORT_DIAGNOSIS_CTX, // User is asking about charging port diagnosis
-      FACTORY_RECOMMENDED_MAINTENANCE: "", // User is asking about factory recommended maintenance
-      OIL_CHANGE: OIL_CHANGE_CTX, // User is asking about oil change
-      TIRE_ROTATION: TIRE_ROTATION_CTX, // User is asking about tire rotation
-      WINDSHIELD_WIPER_REPLACEMENT: WINDSHIELD_WIPER_CTX, // User is asking about windshield wiper replacement
-      RECOMMEND_SERVICE: RECOMMEND_SERVICE_CTX, // User is asking for a service recommendation
-      CONFIRM_APPOINTMENT: "", // User is confirming an appointment
-      SUGGEST_AVAILABILITY: "", // User is asking for availability
-      UNKNOWN: UNKNOWN_CTX, // It is unclear what the user is asking
+      // User is asking what services are available
+      SERVICE_OPTIONS: SERVICE_OPTIONS_CTX,
+      // User is asking about battery replacement
+      BATTERY_REPLACEMENT: BATTERY_REPLACEMENT_CTX,
+      // User is asking about charging port diagnosis
+      CHARGING_PORT_DIAGNOSIS: CHARGING_PORT_DIAGNOSIS_CTX,
+      // User is asking about factory recommended maintenance
+      FACTORY_RECOMMENDED_MAINTENANCE: FACTORY_MAINTENANCE_CTX,
+      // User is asking about oil change
+      OIL_CHANGE: OIL_CHANGE_CTX,
+      // User is asking about tire rotation
+      TIRE_ROTATION: TIRE_ROTATION_CTX,
+      // User is asking about windshield wiper replacement
+      WINDSHIELD_WIPER_REPLACEMENT: WINDSHIELD_WIPER_CTX,
+      // User is asking for a service recommendation
+      RECOMMEND_SERVICE: RECOMMEND_SERVICE_CTX,
+      // User is asking for availability
+      SUGGEST_AVAILABILITY: SUGGEST_AVAILABILITY_CTX,
+      // User is confirming an appointment
+      CONFIRM_APPOINTMENT: CONFIRM_APPOINTMENT_CTX,
+      // It is unclear what the user is asking
+      UNKNOWN: UNKNOWN_INTENT_CTX,
     };
 
     return { resp: llmResp, context: intentMapping[intent] };

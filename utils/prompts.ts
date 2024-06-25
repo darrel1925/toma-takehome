@@ -82,7 +82,7 @@ const ASSISTANT_INTENT = `
 //// ASSISTANT SET UP ////
 //////////////////////////
 
-export const INITIAL_INTENT = `
+export const INITIAL_INTENT_CTX = `
   This is the caller's first response in the conversation. You should identify the intent from the caller's response. 
   
   If the intent is one of the following (BATTERY_REPLACEMENT, CHARGING_PORT_DIAGNOSIS, FACTORY_RECOMMENDED_MAINTENANCE, OIL_CHANGE, TIRE_ROTATION, WINDSHIELD_WIPER_REPLACEMENT, RECOMMEND_SERVICE),  
@@ -99,24 +99,7 @@ export const INITIAL_INTENT = `
   Let's continue the conversation with the caller's response: "{user_response}"
 `;
 
-export const TIRE_ROTATION_INTENT = `
-I would like to schedule a tire rotation for my vehicle.
-
-First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
-Once that is collected in the JSON object, you must focus on collecting my first and last name.
-After that is collected in the JSON object, you must focus on collecting the appointment time and day of the week, for the tire rotation.
-If the I provide any of this information, you must update the JSON object accordingly in your response.
-
-Once all the information is collected, repeat it back to me, wait for me to confirm, and then confirm my appointment and change the intent to CONFIRM_APPOINTMENT.
-
-Be flexible and adapt to my needs. Be polite and personable in your responses.
-Here is the current information you have from me: {user_info}
-________________
-
-Let's continue the conversation with my response: "{user_response}" My desired service is tire rotation.
-`;
-
-export const BATTERY_REPLACEMENT_INTENT = `
+export const BATTERY_REPLACEMENT_CTX = `
 I would like to schedule a battery replacement for my vehicle.
 
 First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
@@ -133,7 +116,7 @@ ________________
 Let's continue the conversation with my response: "{user_response}" My desired service is battery replacement.
 `;
 
-export const CHARGING_PORT_DIAGNOSIS_INTENT = `
+export const CHARGING_PORT_DIAGNOSIS_CTX = `
 I would like to schedule a charging port diagnosis for my vehicle.
 
 Note, this service is only available for fully electric vehicles. If the caller does not have a fully electric vehicle, you must let them know that this service is not available for their vehicle and recommend a service that is available for their vehicle.
@@ -152,7 +135,27 @@ ________________
 Let's continue the conversation with my response: "{user_response}" My desired service is charging port diagnosis.
 `;
 
-export const OIL_CHANGE_INTENT = `
+export const FACTORY_MAINTENANCE_CTX = `
+I would like to know the recommended maintenance schedule for my vehicle.
+
+First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
+If i have a Stellantis vehicle (Abarth, Alfa Romeo, Chrysler, Citroën, Dodge, DS, Fiat, Jeep, Lancia, Maserati, Opel, Peugeot, Ram, Vauxhall), you must recommend factory-recommended maintenance only if my vehicle hit 50k miles or more.
+Ask for the current mileage of the vehicle, then recommend the factory-recommended maintenance if the mileage is 50k or more. Let me know if the mileage is less than 50k, I won't need the factory-recommended maintenance and recommend something else.
+
+Once you have confirmed my service choice, you must focus on collecting my first and last name.
+After that is collected in the JSON object, you must focus on collecting the appointment time and day of the week, for the factory-recommended maintenance.
+If the I provide any of this information, you must update the JSON object accordingly in your response.
+
+Once all the information is collected, repeat it back to me, wait for me to confirm, and then confirm my appointment and change the intent to CONFIRM_APPOINTMENT.
+
+Be flexible and adapt to my needs. Be polite and personable in your responses.
+Here is the current information you have from me: {user_info}
+________________
+
+Let's continue the conversation with my response: "{user_response}"
+`;
+
+export const OIL_CHANGE_CTX = `
 I would like to schedule an oil change for my vehicle.
 
 First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
@@ -169,7 +172,24 @@ ________________
 Let's continue the conversation with my response: "{user_response}"
 `;
 
-export const WINDSHIELD_WIPER_REPLACEMENT = `
+export const TIRE_ROTATION_CTX = `
+I would like to schedule a tire rotation for my vehicle.
+
+First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
+Once that is collected in the JSON object, you must focus on collecting my first and last name.
+After that is collected in the JSON object, you must focus on collecting the appointment time and day of the week, for the tire rotation.
+If the I provide any of this information, you must update the JSON object accordingly in your response.
+
+Once all the information is collected, repeat it back to me, wait for me to confirm, and then confirm my appointment and change the intent to CONFIRM_APPOINTMENT.
+
+Be flexible and adapt to my needs. Be polite and personable in your responses.
+Here is the current information you have from me: {user_info}
+________________
+
+Let's continue the conversation with my response: "{user_response}" My desired service is tire rotation.
+`;
+
+export const WINDSHIELD_WIPER_CTX = `
 I would like to schedule a windshield wiper replacement for my vehicle.
 
 First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
@@ -186,7 +206,18 @@ ________________
 Let's continue the conversation with my response: "{user_response}" My desired service is windshield wiper replacement.
 `;
 
-export const RECOMMEND_SERVICE_INTENT = `
+export const SERVICE_OPTIONS_CTX = `
+I would like to know what services you offer.
+
+You should provide me with 2 examples of the 6 services available at the service center.
+Only provide me with a full list of services if explicitly I ask for it.
+Here is the current information you have from me: {user_info}
+________________
+
+Let's continue the conversation with my response: "{user_response}"
+`;
+
+export const RECOMMEND_SERVICE_CTX = `
 I would like you to recommend a service for me.
 
 First you must focus on collecting the make, model, and year of my vehicle. Keep asking until you acquire all three pieces of information.
@@ -204,7 +235,42 @@ ________________
 Let's continue the conversation with my response: "{user_response}"
 `;
 
-export const UNKNOWN_INTENT = `
+export const SUGGEST_AVAILABILITY_CTX = `
+I would like to know if you have any availability for my desired service.
+
+Before you can suggest availability, you must first know the desired service that I am interested in.
+You must know my vehicle make, model, and year.
+You must know my first and last name.
+
+The service center can ONLY service electric vehicles from Monday to Friday from 9am to 5pm on odd hours until 5pm (... 1pm, 3pm, 5pm). This is strict and cannot be changed.
+The service center can ONLY service non-electric vehicles from Monday to Friday from 10am to 6pm on even hours until 6pm (... 12pm, 2pm, 4pm, 6pm). This is strict and cannot be changed.
+
+You must used your knowledge to determine whether I have an electric vehicle or not and suggest availability accordingly.
+
+Here is the current information you have from me: {user_info}
+________________
+
+Let's continue the conversation with my response: "{user_response}"
+`;
+
+export const CONFIRM_APPOINTMENT_CTX = `
+I would like to confirm my appointment.
+
+Before you can confirm my appointment, you must first know the desired service that I am interested in.
+You must know my vehicle make, model, and year.
+You must know my first and last name.
+You must know the appointment time and day of the week.
+
+Once you have all the information, repeat it back to me, wait for me to confirm, and then confirm my appointment.
+
+Be flexible and adapt to my needs. Be polite and personable in your responses.
+Here is the current information you have from me: {user_info}
+________________
+
+Let's continue the conversation with my response: "{user_response}"
+`;
+
+export const UNKNOWN_INTENT_CTX = `
 When I provide a response that is unclear, you get me back on track by asking how you can assist me. You should give 
 one or two examples of the services available at the service center.
 Here is the current information you have from me: {user_info}
@@ -213,16 +279,10 @@ ________________
 Let's continue the conversation with my response: "{user_response}"
 `;
 
-export const SERVICE_OPTIONS_INTENT = `
-I would like to know what services you offer.
 
-You should provide me with 2 examples of the 6 services available at the service center.
-Only provide me with a full list of services if explicitly I ask for it.
-Here is the current information you have from me: {user_info}
-________________
-
-Let's continue the conversation with my response: "{user_response}"
-`;
+//////////////////////////
+//// RESPONSE FORMAT ////
+//////////////////////////
 
 export const RESPONSE_FORMATTING = `
   The format of your response should be the intent in all caps followed by "::", followed by the updated JSON object containing my updated information, followed by "::", followed by your reply to me. \
