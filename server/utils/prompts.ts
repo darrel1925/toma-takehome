@@ -38,6 +38,7 @@ export const ASSISTANT_INTENT = `
   If the caller asks "Do you have any availability?", the intent is SUGGEST_AVAILABILITY. 
   If the caller asks "What is the recommended maintenance schedule?", the intent is FACTORY_RECOMMENDED_MAINTENANCE. 
   If the caller's intent does not change, keep the same intent.
+
 `;
 
 const APPOINTMENT_SCHEDULING = `
@@ -221,33 +222,9 @@ export const RESPONSE_FORMATTING = `
   For example, if I ask "What services do you offer?", you should respond with SERVICE_OPTIONS::{"firstName": "", "lastName": "", "vehicleMake": "", "vehicleModel": "", "vehicleYear": "", "desiredService": "", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
   If I ask "Can you recommend a service?", you should respond with RECOMMEND_SERVICE::{"firstName": "", "lastName": "", "vehicleMake": "", "vehicleModel": "", "vehicleYear": "", "desiredService": "", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
   If I say "I want an oil change on my Chevy on Monday", you should respond with OIL_CHANGE::{"firstName": "", "lastName": "", "vehicleMake": "Chevy", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil change", "appointmentTime": "", "appointmentDayOfWeek": "Monday"}::RESPONSE. \
-  If I then says "My name is Darrel and I want an appoint at 6pm" you should respond with CONFIRM_APPOINTMENT::{firstName: "Darrel", "lastName": "", "vehicleMake": "Chevy", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil change", "appointmentTime": "6pm", "appointmentDayOfWeek": "Monday"}::RESPONSE. \
-  If I then asks "Do you have any availability? Oh my last name is Carter.", you should respond with SUGGEST_AVAILABILITY::{firstName: "Darrel", "lastName": "Carter", "vehicleMake": "Chevy", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil change", "appointmentTime": "6pm", "appointmentDayOfWeek": "Monday"}::RESPONSE. \
+  If I then says "My name is Darrel and I want an appoint at 6pm" you should respond with CONFIRM_APPOINTMENT::{"firstName": "Darrel", "lastName": "", "vehicleMake": "Chevy", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil change", "appointmentTime": "6pm", "appointmentDayOfWeek": "Monday"}::RESPONSE. \
+  If I then asks "Do you have any availability? Oh my last name is Carter.", you should respond with SUGGEST_AVAILABILITY::{"firstName": "Darrel", "lastName": "Carter", "vehicleMake": "Chevy", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil change", "appointmentTime": "6pm", "appointmentDayOfWeek": "Monday"}::RESPONSE. \
 `;
-
-// export const ASSISTANT_STATE_PROVIDING_VEHICLE_INFO = `CONTEXT: In your current conversation, your caller's intent is {intent}. Your goal is to collect the make, model, and year of caller's vehicle. \
-// If you no vehicle information, you should ask the caller for the make, model, and year of their vehicle. \
-// If you have the make, but not the model or year, you should ask the caller for the model and year. \
-// Any time the caller provides you with any of the vehicle information, you should update the JSON object with the new information. \
-// For this example, assume the caller's intent is OIL_CHANGE and the caller's information is {firstName: "Darrel", "lastName": "", "vehicleMake": "", "vehicleModel": "", "vehicleYear": "", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}
-// If the caller says "Toyota 2015", you should update the json and ask for the car's year in this format OIL_CHANGE::{firstName: "Darrel", "lastName": "", "vehicleMake": "Toyota", "vehicleModel": "Camry", "vehicleYear": "", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// If the caller says "Sorry, Tesla Model 3 2012", you should update the json and ask for the car's year in this format OIL_CHANGE::{firstName: "Darrel", "lastName": "", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// If the callers says "What appointments are available?", you should respond with SUGGEST_AVAILABILITY::{firstName: "Darrel", "lastName": "", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// This is the information you currently have {user_context}. \
-// YOUR TURN: Now, ask for the remaining vehicle information \
-// `;
-
-// export const ASSISTANT_STATE_PROVIDING_NAME = `CONTEXT: In your current conversation, your caller's intent is {intent}. Your goal is to collect the caller's first and last name. \
-// If you have the first name, but not the last name, you should ask the caller for their last name. \
-// If you have neither the first nor last name, you should ask the caller for both. \
-// Any time the caller provides you with any of the names, you should update the JSON object with the new information. \
-// For this example, assume the caller's intent is OIL_CHANGE and the caller's information is {"firstName": "", "lastName": "", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}
-// If the caller says "Darrel", you should update the json and ask for the last name in this format OIL_CHANGE::{firstName: "Darrel", "lastName": "", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// If the caller says "Sorry, it's Darrel Carter", you should update the json and ask for the car's year in this format OIL_CHANGE::{firstName: "Darrel", "lastName": "Carter", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// If the callers says "What appointments are available?", you should respond with SUGGEST_AVAILABILITY::{firstName: "Darrel", "lastName": "Carter", "vehicleMake": "Tesla", "vehicleModel": "Model 3", "vehicleYear": "2012", "desiredService": "oil_change", "appointmentTime": "", "appointmentDayOfWeek": ""}::RESPONSE. \
-// This is the information you currently have {user_context}. \
-// YOUR TURN: Now, ask for the remaining name information \
-// `;
 
 export const initialMessages: Message[] = [
   {
@@ -271,4 +248,3 @@ export const initialIntentMessages = [
     content: ASSISTANT_INTENT,
   },
 ];
-
