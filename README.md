@@ -23,11 +23,20 @@ Start program
 bun start
 ```
 
-Other conciderations
+Other considerations
 1. Ensure your file is named `.env` with the "." when you drag and drop
 2. You must have typescript installed `npm install -g typescript` or `brew install typescript`
-3. The first time you run the application, you may be asked to give permissions to your microphone. If this happens, restart the app.
+3. The first time you run the application, you may be asked to permit to your microphone. If this happens, restart the app.
 4. This was only tested on a Mac. Try using a mac if you run into trouble.
+
+
+### Code references
+• Text-to-speech API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L93-L130)
+• Speech-to-text API: [link](https://github.com/darrel1925/toma-takehome/blob/main/clients/deepgram.ts#L28-L91)
+• Convert audio to 8kHz mulaw: [link](https://github.com/darrel1925/toma-takehome/blob/main/service/waveFileService.ts#L5-L32)
+
+### Notes
+• I did not use together AI's LLM's API. I used OpenAI's because GPT-4o was easier to use.
 
 
 :)
